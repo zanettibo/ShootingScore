@@ -1,0 +1,52 @@
+name: Test
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.8'
+          channel: 'stable'
+      
+      - name: Install dependencies
+        run: flutter pub get
+      
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+        
+      - name: Analyze project source
+        run: flutter analyze
+      
+      - name: Run tests with coverage
+        run: flutter test --coverage
+      
+      - name: Install lcov
+        run: sudo apt-get install -y lcov
+        
+      - name: Generate coverage report
+        run: genhtml coverage/lcov.info -o coverage/html
+        
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          
+      - name: Check test coverage
+        run: |
+          total_lines=$(lcov --summary coverage/lcov.info | grep "lines......:" | awk '{print $2}')
+          echo "Total coverage: $total_lines"
+          
+          # Vous pouvez ajouter un seuil minimum de couverture si nécessaire
+          # Ex: if (( $(echo "$total_lines < 70.0" | bc -l) )); then exit 1; fi

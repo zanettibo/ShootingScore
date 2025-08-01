@@ -1,0 +1,4 @@
+storePassword=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+keyPassword=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+keyAlias=google-play
+storeFile=/home/xxxxxxxxxxxxxxxxxxxx/keys/google-play.jks

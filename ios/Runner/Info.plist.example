@@ -1,0 +1,20 @@
+<!-- Pour Info.plist -->
+<!-- Ajoutez ces entrées avant la balise de fin </dict> -->
+
+<!-- Déclaration que l'app n'utilise que des algorithmes standards (pas d'exportation restreinte) -->
+<key>ITSAppUsesNonExemptEncryption</key>
+<false/>
+
+<!-- OU, si votre app utilise un chiffrement personnalisé, utilisez ceci à la place : -->
+<!--
+<key>ITSAppUsesNonExemptEncryption</key>
+<true/>
+<key>ITSEncryptionExportComplianceCode</key>
+<string>VOTRE_CODE_DE_COMPLIANCE</string>
+-->
+
+<!-- Pour spécifier que l'app sera utilisée en France (ou autre pays) -->
+<key>LSApplicationQueriesSchemes</key>
+<array>
+    <!-- Vos valeurs existantes si présentes -->
+</array>

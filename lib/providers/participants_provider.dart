@@ -57,8 +57,9 @@ class ParticipantsProvider extends ChangeNotifier {
 
   void updateParticipant(Participant updatedParticipant) {
     final index = _participants.indexWhere(
-        (participant) => participant.id == updatedParticipant.id);
-    
+      (participant) => participant.id == updatedParticipant.id,
+    );
+
     if (index != -1) {
       _participants[index] = updatedParticipant;
       notifyListeners();
@@ -72,27 +73,15 @@ class ParticipantsProvider extends ChangeNotifier {
     saveParticipants();
   }
 
-  void addScoreToParticipant(String participantId, Score score) {
-    final index = _participants.indexWhere(
-        (participant) => participant.id == participantId);
-    
-    if (index != -1) {
-      _participants[index].scores.add(score);
-      notifyListeners();
-      saveParticipants();
-    }
-  }
+  // Note: Les méthodes de gestion de scores ont été déplacées dans SessionsProvider
+  // car les scores sont maintenant gérés par session et non par participant
 
-  void updateScoreForParticipant(String participantId, int scoreIndex, Score updatedScore) {
-    final participantIndex = _participants.indexWhere(
-        (participant) => participant.id == participantId);
-    
-    if (participantIndex != -1 && 
-        scoreIndex >= 0 && 
-        scoreIndex < _participants[participantIndex].scores.length) {
-      _participants[participantIndex].scores[scoreIndex] = updatedScore;
-      notifyListeners();
-      saveParticipants();
+  // Récupérer un participant par son id
+  Participant? getParticipantById(String id) {
+    try {
+      return _participants.firstWhere((participant) => participant.id == id);
+    } catch (e) {
+      return null;
     }
   }
 }

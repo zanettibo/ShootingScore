@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shootingscore/models/participant.dart';
+import 'package:shootingscore/models/session.dart';
 import 'package:shootingscore/providers/participants_provider.dart';
+import 'package:shootingscore/providers/sessions_provider.dart';
 import 'package:shootingscore/screens/participant_form_screen.dart';
 import 'package:shootingscore/screens/score_entry_screen.dart';
 
@@ -16,63 +18,69 @@ class HomeScreen extends StatelessWidget {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
-      body: Consumer<ParticipantsProvider>(
-        builder: (context, participantsProvider, child) {
-          if (participantsProvider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: SafeArea(
+        bottom:
+            true, // Important pour éviter la superposition avec les boutons Android
+        child: Consumer<ParticipantsProvider>(
+          builder: (context, participantsProvider, child) {
+            if (participantsProvider.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (participantsProvider.participants.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.person_off, size: 80, color: Colors.grey),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Aucun stagiaire enregistré',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.add),
-                      label: const Text('Ajouter un stagiaire'),
-                      onPressed: () => _navigateToAddParticipant(context),
-                    ),
-                  ],
+            if (participantsProvider.participants.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.person_off,
+                        size: 80,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Aucun stagiaire enregistré',
+                        style: TextStyle(fontSize: 18),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.add),
+                        label: const Text('Ajouter un stagiaire'),
+                        onPressed: () => _navigateToAddParticipant(context),
+                      ),
+                    ],
+                  ),
                 ),
+              );
+            }
+
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Liste des Stagiaires',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: participantsProvider.participants.length,
+                      itemBuilder: (context, index) {
+                        final participant =
+                            participantsProvider.participants[index];
+                        return ParticipantCard(participant: participant);
+                      },
+                    ),
+                  ),
+                ],
               ),
             );
-          }
-
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Liste des Stagiaires',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: participantsProvider.participants.length,
-                    itemBuilder: (context, index) {
-                      final participant = participantsProvider.participants[index];
-                      return ParticipantCard(participant: participant);
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _navigateToAddParticipant(context),
@@ -84,9 +92,7 @@ class HomeScreen extends StatelessWidget {
 
   void _navigateToAddParticipant(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const ParticipantFormScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ParticipantFormScreen()),
     );
   }
 }
@@ -94,27 +100,53 @@ class HomeScreen extends StatelessWidget {
 class ParticipantCard extends StatelessWidget {
   final Participant participant;
 
-  const ParticipantCard({
-    super.key,
-    required this.participant,
-  });
+  const ParticipantCard({super.key, required this.participant});
 
   @override
   Widget build(BuildContext context) {
+    final sessionsProvider = Provider.of<SessionsProvider>(context);
+    final allScores = sessionsProvider.getAllSessionScoresForParticipant(
+      participant.id,
+    );
+
     // Calculate average score if there are scores available
-    final hasScores = participant.scores.isNotEmpty;
-    final latestScore = hasScores ? participant.scores.last : null;
+    final hasScores = allScores.isNotEmpty;
+    final latestScoreData = hasScores ? allScores.last : null;
+    final latestScore = latestScoreData != null
+        ? latestScoreData['score']
+        : null;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 3,
       child: InkWell(
         onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => ScoreEntryScreen(participant: participant),
-            ),
-          );
+          final activeSessions = Provider.of<SessionsProvider>(
+            context,
+            listen: false,
+          ).sessions.where((s) => s.status == SessionStatus.enCours).toList();
+          final session = activeSessions.isNotEmpty
+              ? activeSessions.first
+              : null;
+
+          if (session != null) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => ScoreEntryScreen(
+                  participant: participant,
+                  session: session,
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Aucune session active. Créez ou activez une session pour saisir des scores.',
+                ),
+              ),
+            );
+          }
         },
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -154,8 +186,8 @@ class ParticipantCard extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: latestScore.isLowScore
-                            ? Colors.red.withOpacity(0.1)
-                            : Colors.green.withOpacity(0.1),
+                            ? Colors.red.withValues(alpha: 0.1)
+                            : Colors.green.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -163,7 +195,9 @@ class ParticipantCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: latestScore.isLowScore ? Colors.red : Colors.green,
+                          color: latestScore.isLowScore
+                              ? Colors.red
+                              : Colors.green,
                         ),
                       ),
                     ),
@@ -174,16 +208,37 @@ class ParticipantCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Sessions: ${participant.scores.length}',
+                    'Sessions: ${allScores.length}',
                     style: const TextStyle(color: Colors.grey),
                   ),
                   TextButton.icon(
                     onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => ScoreEntryScreen(participant: participant),
-                        ),
-                      );
+                      // Utiliser la dernière session active ou créer une nouvelle session au besoin
+                      final activeSessions = sessionsProvider.sessions
+                          .where((s) => s.status == SessionStatus.enCours)
+                          .toList();
+                      final session = activeSessions.isNotEmpty
+                          ? activeSessions.first
+                          : null;
+
+                      if (session != null) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => ScoreEntryScreen(
+                              participant: participant,
+                              session: session,
+                            ),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Aucune session active. Créez ou activez une session pour saisir des scores.',
+                            ),
+                          ),
+                        );
+                      }
                     },
                     icon: const Icon(Icons.edit),
                     label: const Text('Saisir scores'),
